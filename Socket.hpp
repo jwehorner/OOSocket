@@ -1,6 +1,7 @@
 #ifndef SOCKET_HPP
 #define SOCKET_HPP
 
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -81,6 +82,9 @@ public:
 	 * @throws	runtime error if an error occured while receiving the data.
 	 */
 	std::vector<char> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
+		// Lock the mutex so the socket to prevent race conditions.
+		std::unique_lock<std::mutex> access_lock(access_mutex);
+
 		// Allocate the receive buffer based on the estimate provided.
 		char *buffer = (char*)malloc(buffer_size);
 
@@ -110,6 +114,9 @@ public:
  	 * @throws	runtime error if the address of the remote host is invalid or if an error occured while sending the data.
 	 */
 	int send_to(std::vector<char> buffer, unsigned short port, std::string address = "127.0.0.1", int flags = 0) {
+		// Lock the mutex so the socket to prevent race conditions.
+		std::unique_lock<std::mutex> access_lock(access_mutex);
+
 		// Populate a temporary struct to hold the destination address.
 		sockaddr_in address_struct;
 		address_struct.sin_family = AF_INET;
@@ -124,6 +131,7 @@ public:
 		// If an error occurs, throw an error.
 		if (result == -1) {
 			throw_runtime_error("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR");
+			return -1;
 		}
 		// Else return the number of bytes sent.
 		else {
@@ -140,6 +148,9 @@ public:
 	 * @throws	runtime error if the remote host has not been pre-configured or if an error occured while sending the data.
 	 */
 	int send(std::vector<char> buffer, int flags = 0) {
+		// Lock the mutex so the socket to prevent race conditions.
+		std::unique_lock<std::mutex> access_lock(access_mutex);
+
 		if (remote_address_set) {
 			// Send the contents of the string buffer to the preconfigured remote host.
 			int result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
@@ -147,6 +158,7 @@ public:
 			// If an error occurs, throw an error.
 			if (result == -1) {
 				throw_runtime_error("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR");
+				return -1;
 			}
 			// Else return the number of bytes sent.
 			else {
@@ -173,6 +185,9 @@ public:
 	 * @param 	address	string representation of the address of the remote host (default loopback).
 	 */
 	void configure_remote_host(unsigned short port, std::string address = "127.0.0.1") {
+		// Lock the mutex so the socket to prevent race conditions.
+		std::unique_lock<std::mutex> access_lock(access_mutex);
+
 		// Specify address family of the destination.
 		remote_address.sin_family = AF_INET;
 		
@@ -198,6 +213,9 @@ protected:
 	sockaddr_in remote_address;
 	/// Flag for if the remote address has been preconfigured.  
 	bool remote_address_set;
+
+	/// Mutex to control access to the methods of the socket.
+	std::mutex access_mutex;
 
 	/**
 	 * 	@brief	Method initialize_windows_sockets starts WSA in preparation for using sockets in Windows.
