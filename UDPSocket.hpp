@@ -83,7 +83,7 @@ public:
 	 */
 	std::vector<char> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(receive_mutex);
+		std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
 		// Allocate the receive buffer based on the estimate provided.
 		char *buffer = (char*)malloc(buffer_size);
@@ -115,7 +115,7 @@ public:
 	 */
 	int send_to(std::vector<char> buffer, unsigned short port, std::string address = "127.0.0.1", int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(send_mutex);
+		std::unique_lock<std::mutex> send_lock(send_mutex);
 
 		// Populate a temporary struct to hold the destination address.
 		sockaddr_in address_struct;
@@ -150,7 +150,7 @@ public:
 	int send(std::vector<char> buffer, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
 		std::unique_lock<std::mutex> access_lock(member_mutex);
-		std::unique_lock<std::mutex> access_lock(send_mutex);
+		std::unique_lock<std::mutex> send_lock(send_mutex);
 
 		if (remote_address_set) {
 			// Send the contents of the string buffer to the preconfigured remote host.
