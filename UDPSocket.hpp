@@ -1,5 +1,5 @@
-#ifndef SOCKET_HPP
-#define SOCKET_HPP
+#ifndef UDP_SOCKET_HPP
+#define UDP_SOCKET_HPP
 
 #include <mutex>
 #include <stdexcept>
@@ -20,9 +20,9 @@
 
 #define MAX_RECEIVE_BUFFER_SIZE 1500
 
-class Socket {
+class UDPSocket {
 public:
-	Socket(unsigned short port, std::string address = "") {
+	UDPSocket(unsigned short port, std::string address = "") {
 		// Before doing anything make sure winsock is started.
 #ifdef _WIN32
 		initialize_windows_sockets();
@@ -83,7 +83,7 @@ public:
 	 */
 	std::vector<char> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(access_mutex);
+		std::unique_lock<std::mutex> access_lock(receive_mutex);
 
 		// Allocate the receive buffer based on the estimate provided.
 		char *buffer = (char*)malloc(buffer_size);
@@ -115,7 +115,7 @@ public:
 	 */
 	int send_to(std::vector<char> buffer, unsigned short port, std::string address = "127.0.0.1", int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(access_mutex);
+		std::unique_lock<std::mutex> access_lock(send_mutex);
 
 		// Populate a temporary struct to hold the destination address.
 		sockaddr_in address_struct;
@@ -149,7 +149,8 @@ public:
 	 */
 	int send(std::vector<char> buffer, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(access_mutex);
+		std::unique_lock<std::mutex> access_lock(member_mutex);
+		std::unique_lock<std::mutex> access_lock(send_mutex);
 
 		if (remote_address_set) {
 			// Send the contents of the string buffer to the preconfigured remote host.
@@ -186,7 +187,7 @@ public:
 	 */
 	void configure_remote_host(unsigned short port, std::string address = "127.0.0.1") {
 		// Lock the mutex so the socket to prevent race conditions.
-		std::unique_lock<std::mutex> access_lock(access_mutex);
+		std::unique_lock<std::mutex> access_lock(member_mutex);
 
 		// Specify address family of the destination.
 		remote_address.sin_family = AF_INET;
@@ -214,8 +215,14 @@ protected:
 	/// Flag for if the remote address has been preconfigured.  
 	bool remote_address_set;
 
-	/// Mutex to control access to the methods of the socket.
-	std::mutex access_mutex;
+	/// Mutex to control ability to access private variables in the socket.
+	std::mutex member_mutex;
+
+	/// Mutex to control ability to send using the socket.
+	std::mutex send_mutex;
+
+	/// Mutex to control ability to receive using the socket.
+	std::mutex receive_mutex;
 
 	/**
 	 * 	@brief	Method initialize_windows_sockets starts WSA in preparation for using sockets in Windows.
@@ -242,7 +249,7 @@ protected:
 	 *	@throws runtime error.
 	*/
 	void throw_runtime_error(std::string message, std::string level = "ERROR") {
-		throw std::runtime_error("[Socket] (" + level + ") " + message + "\n");
+		throw std::runtime_error("[UDPSocket] (" + level + ") " + message + "\n");
 	}
 
 	/**
@@ -258,4 +265,4 @@ protected:
 	}
 };
 
-#endif /* SOCKET_HPP */
+#endif /* UDP_SOCKET_HPP */
