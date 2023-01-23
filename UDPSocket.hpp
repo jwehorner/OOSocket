@@ -67,6 +67,13 @@ public:
 		setsockopt(socket_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
 		setsockopt(socket_file_descriptor, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on));
 		
+		// Fix WSA Error 10054 being thrown by recv after send to unreachable destination.
+#ifdef _WIN32
+        BOOL bNewBehavior = FALSE;
+        DWORD dwBytesReturned = 0;
+        WSAIoctl(socket_file_descriptor, _WSAIOW(IOC_VENDOR, 12), &bNewBehavior, sizeof bNewBehavior, NULL, 0, &dwBytesReturned, NULL, NULL);
+#endif
+
 		// Bind socket to local address provided earlier.
 		int return_code = bind(socket_file_descriptor, (struct sockaddr *) &local_address, sizeof(struct sockaddr_in));
 		if (return_code) {
@@ -168,6 +175,7 @@ public:
 		}
 		else {
 			throw_runtime_error("Remote host address and port has not been set.", "WARNING");
+			return -1;
 		}
 	}
 
