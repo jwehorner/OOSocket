@@ -22,7 +22,7 @@
 
 class UDPSocket {
 public:
-	UDPSocket(unsigned short port, std::string address = "") {
+	UDPSocket(unsigned short port, std::string address = "") : local_port(port) {
 		// Before doing anything make sure winsock is started.
 #ifdef _WIN32
 		initialize_windows_sockets();
@@ -48,7 +48,11 @@ public:
 		}
 
 		// Get a socket file descriptor and store it in the class member.
+#ifdef _WIN32
+		socket_file_descriptor = WSASocketA(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+#else
 		socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0);
+#endif
 
 		// If there is an error getting the socket descriptor, throw an error.
 		if(socket_file_descriptor < 0 ) {
@@ -211,10 +215,32 @@ public:
 		remote_address_set = true;
 	}
 
+	void set_socket_receive_timeout(unsigned int timeout_ms) {
+#ifdef _WIN32
+		// windows wants timeouts as DWORD in ms
+		DWORD timeout_ms_long = (DWORD)(timeout_ms);
+		if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout_ms_long, sizeof(timeout_ms_long))) {
+			throw_runtime_error("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR");
+		}
+#else
+		struct timeval timeout_struct;
+		// Get the equivalent number of seconds from the milliseconds.
+		timeout_struct.tv_sec = (int)(timeout_ms / 1000.0);
+		// Set the remaining number of microseconds.
+		// Remaining microseconds = ((total milliseconds) - (seconds * 1000)) * 1000
+		timeout_struct.tv_usec = (int)(timeout_ms - (timeout_struct.tv_sec * 1000.0)) * 1000;
+		if (setsockopt(sock_data->s, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
+			throw_runtime_error("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR");
+		}
+#endif   
+	}
+
 protected:
 	/// File descriptor of the socket that the class uses.
 	unsigned long long socket_file_descriptor;
 
+	/// The local port number of the socket. 
+	unsigned short local_port;
 	/// Struct holding the local address of the socket. 
 	sockaddr_in local_address;
 
