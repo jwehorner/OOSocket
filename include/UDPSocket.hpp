@@ -136,8 +136,13 @@ public:
 			throw_runtime_error("Provided address was invalid.");
 		}
 		
+#ifdef _WIN32
+		size_t result;
+#else
+		int result;
+#endif
 		// Send the contents of the string buffer using sendto.
-		int result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+		result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
 		
 		// If an error occurs, throw an error.
 		if (result == -1) {
@@ -164,8 +169,13 @@ public:
 		std::unique_lock<std::mutex> send_lock(send_mutex);
 
 		if (remote_address_set) {
+#ifdef _WIN32
+			size_t result;
+#else
+			int result;
+#endif
 			// Send the contents of the string buffer to the preconfigured remote host.
-			int result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+			result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 			
 			// If an error occurs, throw an error.
 			if (result == -1) {
