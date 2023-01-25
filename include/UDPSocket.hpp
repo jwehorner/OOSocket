@@ -89,7 +89,7 @@ public:
 	 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
 	 * @param 	buffer_size 		size of the buffer to be allocated for the storing of incoming packets (default 1500).
 	 * @param 	flags 				any flags that the packet should be received with (default 0).
-	 * @return 	std::vector<char>	bytes that were received from the network.
+	 * @return 	std::vector<char>	bytes that were received from the network, empty if the receive timed out.
 	 * @throws	runtime error if an error occured while receiving the data.
 	 */
 	std::vector<char> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
@@ -104,8 +104,19 @@ public:
 
 		// If an error occurs, throw an error.
 		if (receive_size == -1) {
-			throw_runtime_error("An error occured while receiving data: " + std::to_string(get_last_network_error()), "ERROR");
-			return std::vector<char>();
+			int error_code = get_last_network_error();
+#ifdef _WIN32
+			if (error_code == WSAETIMEDOUT)
+#else
+			if (error_code == ETIMEDOUT)
+#endif
+			{
+				return std::vector<char>();
+			}
+			else {
+				throw_runtime_error("An error occured while receiving data: " + std::to_string(get_last_network_error()), "ERROR");
+				return std::vector<char>();
+			}
 		}
 		// Else, preallocate a vector based on the number of bytes actually received, copy the contents, then return it.
 		else {

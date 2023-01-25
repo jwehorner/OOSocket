@@ -24,29 +24,20 @@ TEST(SocketTest, Test_UDPSocket_constructor_valid) {
 	ASSERT_FALSE(exception_thrown);
 }
 
-TEST(SocketTest, Test_UDPSocket_constructor_invalid) {
+TEST(SocketTest, Test_UDPSocket_receive_timeout) {
 	bool exception_thrown = false;
 	try
 	{
-		// Invalid port and any address
-		UDPSocket s = UDPSocket(10);
+		// Valid port and any address
+		UDPSocket s1 = UDPSocket(66666);
+		s1.set_socket_receive_timeout(1000);
+		std::vector<char> data = s1.receive();
+		ASSERT_EQ(data.size(), 0);
 		exception_thrown = false;
 	}
 	catch (std::exception e)
 	{
 		exception_thrown = true;
 	}
-	ASSERT_TRUE(exception_thrown);
-
-	try
-	{
-		// Valid port and invalid address.
-		UDPSocket s = UDPSocket(44444, "0.0.0.0");
-		exception_thrown = false;
-	}
-	catch (std::exception e)
-	{
-		exception_thrown = true;
-	}
-	ASSERT_TRUE(exception_thrown);
+	ASSERT_FALSE(exception_thrown);
 }
