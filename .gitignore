@@ -463,6 +463,7 @@ _deps
 #======================================================
 simulation_results
 flight_test_results
+notes
 
 # This is created by cmake and must be recreated for new users
 DirectoryConfig.hpp

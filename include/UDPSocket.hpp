@@ -22,7 +22,7 @@
 
 class UDPSocket {
 public:
-	UDPSocket(unsigned short port, std::string address = "") : local_port(port) {
+	UDPSocket(unsigned short port = 0, std::string address = "") : local_port(port) {
 		// Before doing anything make sure winsock is started.
 #ifdef _WIN32
 		initialize_windows_sockets();
@@ -71,6 +71,8 @@ public:
 		setsockopt(socket_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
 		setsockopt(socket_file_descriptor, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on));
 		
+		set_socket_receive_timeout(0);
+
 		// Fix WSA Error 10054 being thrown by recv after send to unreachable destination.
 #ifdef _WIN32
         BOOL bNewBehavior = FALSE;
@@ -98,6 +100,7 @@ public:
 
 		// Allocate the receive buffer based on the estimate provided.
 		char *buffer = (char*)malloc(buffer_size);
+		memset(buffer, 0, buffer_size);
 
 		// Receive the packet.
 		int receive_size = recv(socket_file_descriptor, buffer, buffer_size, flags);
