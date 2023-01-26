@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(Socket)
 
+#################
+###  Options  ###
+#################
+option(BUILD_SOCKET_TESTS "Optionally download test dependancies and compile test cases." OFF)
+
 ############################
 ###  Configured Headers  ###
 ############################
@@ -20,7 +25,10 @@ project(Socket)
 ##########################
 ###  Global Variables  ###
 ##########################
-set(SOCKET_INCLUDES_LIST	"${CMAKE_SOURCE_DIR}/include")
+set(SOCKET_INCLUDES_LIST
+	"${CMAKE_CURRENT_SOURCE_DIR}/include"
+	CACHE STRING "Socket Include Directory"
+)
 
 #################################
 ###  Compiler Specific Fixes  ###
@@ -29,4 +37,6 @@ set(SOCKET_INCLUDES_LIST	"${CMAKE_SOURCE_DIR}/include")
 ########################
 ###  Subdirectories  ###
 ########################
-add_subdirectory(test)
+if(BUILD_SOCKET_TESTS) 
+	add_subdirectory(test)
+endif()
