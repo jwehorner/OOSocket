@@ -1,11 +1,20 @@
+/**
+ * 	@file 	UDPSocket.hpp
+ * 	@brief 	Class UDPSocket is used to encapsulate the operations provided by a UDP socket into an object oriented class.
+ * 	@author James Horner
+ * 	@date 	2023-04-05
+ */
+
 #ifndef UDP_SOCKET_HPP
 #define UDP_SOCKET_HPP
 
+// Standard System Libraries
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+// Platform Specific System Libraries
 #ifdef _WIN32
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <winsock2.h>
@@ -18,8 +27,13 @@
 #include <unistd.h>
 #endif
 
+/// Macro for the maximum buffer when receiving data.
 #define MAX_RECEIVE_BUFFER_SIZE 1500
 
+/**
+ *	@class	UDPSocket
+ * 	@brief 	Class UDPSocket is used to encapsulate the operations provided by a UDP socket into an object oriented class.
+ */
 class UDPSocket {
 public:
 	UDPSocket(unsigned short port = 0, std::string address = "") : local_port(port) {
@@ -43,7 +57,7 @@ public:
 		// If an address is provided, try to parse the string into a network representation.
 		else {
 			if (inet_pton(AF_INET, address.c_str(), (void *)&local_address.sin_addr.s_addr) != 1) {
-				throw_runtime_error("Provided address was invalid.");
+				throw std::runtime_error(format_message("Provided address was invalid."));
 			}
 		}
 
@@ -63,7 +77,7 @@ public:
 #else
 			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
 #endif
-			throw_runtime_error("Could not create socket, failed with error: " + std::to_string(get_last_network_error())); 
+			throw std::runtime_error(format_message("Could not create socket, failed with error: " + std::to_string(get_last_network_error()))); 
 		}
 
 		// Set the reuse address option for the socket and allow the socket to broadcast.
@@ -83,7 +97,7 @@ public:
 		// Bind socket to local address provided earlier.
 		int return_code = bind(socket_file_descriptor, (struct sockaddr *) &local_address, sizeof(struct sockaddr_in));
 		if (return_code) {
-			throw_runtime_error("Could not bind socket to local address, failed with error: " + std::to_string(get_last_network_error()));
+			throw std::runtime_error(format_message("Could not bind socket to local address, failed with error: " + std::to_string(get_last_network_error())));
 		}
 	}
 
@@ -117,7 +131,7 @@ public:
 				return std::vector<char>();
 			}
 			else {
-				throw_runtime_error("An error occured while receiving data: " + std::to_string(get_last_network_error()), "ERROR");
+				throw std::runtime_error(format_message("An error occured while receiving data: " + std::to_string(get_last_network_error()), "ERROR"));
 				return std::vector<char>();
 			}
 		}
@@ -147,7 +161,7 @@ public:
 		address_struct.sin_family = AF_INET;
 		address_struct.sin_port = htons(port);
     	if (inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
-			throw_runtime_error("Provided address was invalid.");
+			throw std::runtime_error(format_message("Provided address was invalid."));
 		}
 		
 #ifdef _WIN32
@@ -160,7 +174,7 @@ public:
 		
 		// If an error occurs, throw an error.
 		if (result == -1) {
-			throw_runtime_error("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR");
+			throw std::runtime_error(format_message("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
 			return -1;
 		}
 		// Else return the number of bytes sent.
@@ -193,7 +207,7 @@ public:
 			
 			// If an error occurs, throw an error.
 			if (result == -1) {
-				throw_runtime_error("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR");
+				throw std::runtime_error(format_message("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
 				return -1;
 			}
 			// Else return the number of bytes sent.
@@ -202,7 +216,7 @@ public:
 			}
 		}
 		else {
-			throw_runtime_error("Remote host address and port has not been set.", "WARNING");
+			throw std::runtime_error(format_message("Remote host address and port has not been set.", "WARNING"));
 			return -1;
 		}
 	}
@@ -233,7 +247,7 @@ public:
 
 		// If an address is provided, try to parse the string into a network representation.
 		if (inet_pton(AF_INET, address.c_str(), (void *)&remote_address.sin_addr.s_addr) != 1) {
-			throw_runtime_error("Provided address was invalid.");
+			throw std::runtime_error(format_message("Provided address was invalid."));
 		}
 
 		remote_address_set = true;
@@ -244,7 +258,7 @@ public:
 		// windows wants timeouts as DWORD in ms
 		DWORD timeout_ms_long = (DWORD)(timeout_ms);
 		if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout_ms_long, sizeof(timeout_ms_long))) {
-			throw_runtime_error("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR");
+			throw std::runtime_error(format_message("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
 		}
 #else
 		struct timeval timeout_struct;
@@ -254,7 +268,7 @@ public:
 		// Remaining microseconds = ((total milliseconds) - (seconds * 1000)) * 1000
 		timeout_struct.tv_usec = (int)(timeout_ms - (timeout_struct.tv_sec * 1000.0)) * 1000;
 		if (setsockopt(sock_data->s, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
-			throw_runtime_error("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR");
+			throw std::runtime_error(format_message("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
 		}
 #endif   
 	}
@@ -296,18 +310,18 @@ protected:
 		if (err != 0) {
 			/* Tell the user that we could not find a usable */
 			/* Winsock DLL.                                  */
-			throw_runtime_error("WSAStartup failed with error: " + WSAGetLastError());
+			throw std::runtime_error(format_message("WSAStartup failed with error: " + WSAGetLastError()));
 		}
 	}
 
 	/**
-	 *	@brief	Method throw_runtime_error is used to throw a runtime error with a formatted string.
-	 *	@param	message	string message to include in the error.
-	 *	@param	level	string level of the error indicating the severity (default ERROR).
-	 *	@throws runtime error.
+	 *	@brief	Method format_message is used to return a formatted string with a message and severity level.
+	 *	@param	message	string message to include in the string.
+	 *	@param	level	string level of the message indicating the severity (default ERROR).
+	 *	@return string	formatted string with message and severity level.
 	*/
-	void throw_runtime_error(std::string message, std::string level = "ERROR") {
-		throw std::runtime_error("[UDPSocket] (" + level + ") " + message + "\n");
+	std::string format_message(std::string message, std::string level = "ERROR") {
+		return std::string("[UDPSocket] (" + level + ") " + message + "\n");
 	}
 
 	/**
