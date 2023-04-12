@@ -102,6 +102,22 @@ public:
 	}
 
 	/**
+	 * 	@brief 	Destructor for the UDPSocket class which closes the socket.
+	 */
+	~UDPSocket() {
+		// Lock the mutex so the socket to prevent race conditions.
+		std::unique_lock<std::mutex> access_lock(member_mutex);
+		std::unique_lock<std::mutex> send_lock(send_mutex);
+
+		// Close the socket file descriptor.
+#ifdef _WIN32
+		closesocket(socket_file_descriptor);
+#else
+		close(socket_file_descriptor);
+#endif
+	}
+
+	/**
 	 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
 	 * @param 	buffer_size 		size of the buffer to be allocated for the storing of incoming packets (default 1500).
 	 * @param 	flags 				any flags that the packet should be received with (default 0).
