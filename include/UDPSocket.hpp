@@ -73,7 +73,7 @@ public:
 			int error_value;
 			unsigned int error_value_size = sizeof(error_value);
 #ifdef _WIN32
-			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
+			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &(int)error_value_size); 
 #else
 			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
 #endif
