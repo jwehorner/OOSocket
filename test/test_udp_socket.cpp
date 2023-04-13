@@ -1,5 +1,7 @@
 #include <iostream>
 #include <stdio.h>
+#include <memory>
+#include <thread>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
@@ -16,7 +18,7 @@ TEST_CASE("Check constructor under valid conditions.", "[UDPSocket]") {
 TEST_CASE("Check receive with timeout.", "[UDPSocket]") {
 	// Valid port and any address
 	std::shared_ptr<UDPSocket> s1;
-	REQUIRE_NOTHROW(s1 = std::make_shared<UDPSocket>(66666));
+	REQUIRE_NOTHROW(s1 = std::make_shared<UDPSocket>(6666));
 	REQUIRE_NOTHROW(s1->set_socket_receive_timeout(1000));
 	REQUIRE(s1->receive().size() == 0);
 }

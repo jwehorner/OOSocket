@@ -71,7 +71,7 @@ public:
 		// If there is an error getting the socket descriptor, throw an error.
 		if(socket_file_descriptor < 0 ) {
 			int error_value;
-			int error_value_size = sizeof(error_value);
+			unsigned int error_value_size = sizeof(error_value);
 #ifdef _WIN32
 			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
 #else
@@ -141,13 +141,13 @@ public:
 #ifdef _WIN32
 			if (error_code == WSAETIMEDOUT)
 #else
-			if (error_code == ETIMEDOUT)
+			if (error_code == EAGAIN || error_code == EWOULDBLOCK)
 #endif
 			{
 				return std::vector<char>();
 			}
 			else {
-				throw std::runtime_error(format_message("An error occured while receiving data: " + std::to_string(get_last_network_error()), "ERROR"));
+				throw std::runtime_error(format_message("An error occured while receiving data: " + std::to_string(error_code), "ERROR"));
 				return std::vector<char>();
 			}
 		}
@@ -283,7 +283,7 @@ public:
 		// Set the remaining number of microseconds.
 		// Remaining microseconds = ((total milliseconds) - (seconds * 1000)) * 1000
 		timeout_struct.tv_usec = (int)(timeout_ms - (timeout_struct.tv_sec * 1000.0)) * 1000;
-		if (setsockopt(sock_data->s, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
+		if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
 			throw std::runtime_error(format_message("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
 		}
 #endif   
@@ -317,6 +317,7 @@ protected:
 	 * 	@throws	runtime error if WSA fails to start.
 	*/
 	void initialize_windows_sockets(void) {
+#ifdef _WIN32
 		WORD wVersionRequested;
 		WSADATA wsaData;
 		int err;
@@ -328,6 +329,7 @@ protected:
 			/* Winsock DLL.                                  */
 			throw std::runtime_error(format_message("WSAStartup failed with error: " + WSAGetLastError()));
 		}
+#endif
 	}
 
 	/**
