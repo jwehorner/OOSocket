@@ -6,4 +6,4 @@ The Socket class provides an easy to use C++ interface to C sockets where most o
 
 ## Contact Info
 James Horner
-James.Horner@nrc-cnrc.gc.ca or JamesHorner@cmail.carleton.ca
+James.Horner@nrc-cnrc.gc.ca or jwehorner@gmail.com

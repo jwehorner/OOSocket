@@ -73,7 +73,7 @@ public:
 			int error_value;
 			unsigned int error_value_size = sizeof(error_value);
 #ifdef _WIN32
-			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &(int)error_value_size); 
+			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, (int*)&error_value_size); 
 #else
 			int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
 #endif
@@ -121,10 +121,11 @@ public:
 	 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
 	 * @param 	buffer_size 		size of the buffer to be allocated for the storing of incoming packets (default 1500).
 	 * @param 	flags 				any flags that the packet should be received with (default 0).
-	 * @return 	std::vector<char>	bytes that were received from the network, empty if the receive timed out.
-	 * @throws	runtime error if an error occured while receiving the data.
+	 * @return 	std::vector<T>		bytes that were received from the network, empty if the receive timed out.
+	 * @throws	runtime error if an error occurred while receiving the data.
 	 */
-	std::vector<char> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
+	template <typename T = char>
+	std::vector<T> receive(uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
 		std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
@@ -144,16 +145,16 @@ public:
 			if (error_code == EAGAIN || error_code == EWOULDBLOCK)
 #endif
 			{
-				return std::vector<char>();
+				return std::vector<T>();
 			}
 			else {
-				throw std::runtime_error(format_message("An error occured while receiving data: " + std::to_string(error_code), "ERROR"));
-				return std::vector<char>();
+				throw std::runtime_error(format_message("An error occurred while receiving data: " + std::to_string(error_code), "ERROR"));
+				return std::vector<T>();
 			}
 		}
 		// Else, preallocate a vector based on the number of bytes actually received, copy the contents, then return it.
 		else {
-			std::vector<char> data = std::vector<char>(receive_size);
+			std::vector<T> data = std::vector<T>(receive_size / sizeof(T));
 			memcpy(data.data(), buffer, receive_size);
 			return data;
 		}
@@ -166,9 +167,10 @@ public:
 	 * @param 	address string representation of the address of the remote host to send the packet to (default loopback).
 	 * @param 	flags 	any flags that the packet should be sent with (default 0).
 	 * @return 	int 	number of bytes sent.
- 	 * @throws	runtime error if the address of the remote host is invalid or if an error occured while sending the data.
+ 	 * @throws	runtime error if the address of the remote host is invalid or if an error occurred while sending the data.
 	 */
-	int send_to(std::vector<char> buffer, unsigned short port, std::string address = "127.0.0.1", int flags = 0) {
+	template <typename T>
+	int send_to(std::vector<T> buffer, unsigned short port, std::string address = "127.0.0.1", int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
 		std::unique_lock<std::mutex> send_lock(send_mutex);
 
@@ -186,11 +188,11 @@ public:
 		int result;
 #endif
 		// Send the contents of the string buffer using sendto.
-		result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+		result = sendto(socket_file_descriptor, buffer.data(), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
 		
 		// If an error occurs, throw an error.
 		if (result == -1) {
-			throw std::runtime_error(format_message("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
+			throw std::runtime_error(format_message("An error occurred while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
 			return -1;
 		}
 		// Else return the number of bytes sent.
@@ -205,9 +207,10 @@ public:
 	 * @param 	buffer	string of bytes to send to the remote host.
 	 * @param 	flags 	any flags that the packet should be sent with (default 0).
 	 * @return 	int 	number of bytes sent.
-	 * @throws	runtime error if the remote host has not been pre-configured or if an error occured while sending the data.
+	 * @throws	runtime error if the remote host has not been pre-configured or if an error occurred while sending the data.
 	 */
-	int send(std::vector<char> buffer, int flags = 0) {
+	template <typename T>
+	int send(std::vector<T> buffer, int flags = 0) {
 		// Lock the mutex so the socket to prevent race conditions.
 		std::unique_lock<std::mutex> access_lock(member_mutex);
 		std::unique_lock<std::mutex> send_lock(send_mutex);
@@ -219,11 +222,11 @@ public:
 			int result;
 #endif
 			// Send the contents of the string buffer to the preconfigured remote host.
-			result = sendto(socket_file_descriptor, buffer.data(), buffer.size(), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+			result = sendto(socket_file_descriptor, buffer.data(), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 			
 			// If an error occurs, throw an error.
 			if (result == -1) {
-				throw std::runtime_error(format_message("An error occured while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
+				throw std::runtime_error(format_message("An error occurred while sending data: " + std::to_string(get_last_network_error()), "ERROR"));
 				return -1;
 			}
 			// Else return the number of bytes sent.
@@ -274,7 +277,7 @@ public:
 		// windows wants timeouts as DWORD in ms
 		DWORD timeout_ms_long = (DWORD)(timeout_ms);
 		if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout_ms_long, sizeof(timeout_ms_long))) {
-			throw std::runtime_error(format_message("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
+			throw std::runtime_error(format_message("An error occurred while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
 		}
 #else
 		struct timeval timeout_struct;
@@ -284,7 +287,7 @@ public:
 		// Remaining microseconds = ((total milliseconds) - (seconds * 1000)) * 1000
 		timeout_struct.tv_usec = (int)(timeout_ms - (timeout_struct.tv_sec * 1000.0)) * 1000;
 		if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
-			throw std::runtime_error(format_message("An error occured while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
+			throw std::runtime_error(format_message("An error occurred while setting the receive timeout: " + std::to_string(get_last_network_error()), "ERROR"));
 		}
 #endif   
 	}
