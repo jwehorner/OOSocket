@@ -188,7 +188,7 @@ public:
 		int result;
 #endif
 		// Send the contents of the string buffer using sendto.
-		result = sendto(socket_file_descriptor, buffer.data(), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+		result = sendto(socket_file_descriptor, reinterpret_cast<char*>(buffer.data()), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
 		
 		// If an error occurs, throw an error.
 		if (result == -1) {
@@ -222,7 +222,7 @@ public:
 			int result;
 #endif
 			// Send the contents of the string buffer to the preconfigured remote host.
-			result = sendto(socket_file_descriptor, buffer.data(), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+			result = sendto(socket_file_descriptor, reinterpret_cast<char*>(buffer.data()), buffer.size() / sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 			
 			// If an error occurs, throw an error.
 			if (result == -1) {
