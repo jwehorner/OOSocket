@@ -82,7 +82,7 @@ namespace oo_socket
 #ifdef _WIN32
 				socket_file_descriptor = WSASocketA(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 #else
-				socket_file_descriptor = socket(AF_INET, SOCK_DGRAM, 0);
+				socket_file_descriptor = ::socket(AF_INET, SOCK_DGRAM, 0);
 #endif
 
 				// If there is an error getting the socket descriptor, throw an error.
