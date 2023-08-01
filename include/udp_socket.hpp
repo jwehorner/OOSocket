@@ -176,7 +176,8 @@ namespace oo_socket
 				}
 				// Else, preallocate a vector based on the number of bytes actually received, copy the contents, then return it.
 				else {
-					std::vector<T> data = std::vector<T>(std::ceil(receive_size / sizeof(T)));
+					std::vector<T> data{};
+					data.resize(std::ceil(receive_size / sizeof(T)));
 					memcpy(data.data(), buffer, receive_size);
 					free(buffer);
 					return data;
