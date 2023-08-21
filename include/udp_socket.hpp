@@ -65,7 +65,7 @@ namespace oo_socket
 				local_address.sin_family = AF_INET;
 				
 				// Set the port of the socket.
-				local_address.sin_port = htons(port);
+				local_address.sin_port = ::htons(port);
 
 				// If no address is provided, just set the local address as any,
 				if (address.compare("") == 0) {
@@ -73,14 +73,14 @@ namespace oo_socket
 				}
 				// If an address is provided, try to parse the string into a network representation.
 				else {
-					if (inet_pton(AF_INET, address.c_str(), (void *)&local_address.sin_addr.s_addr) != 1) {
+					if (::inet_pton(AF_INET, address.c_str(), (void *)&local_address.sin_addr.s_addr) != 1) {
 						throw errors::initialization_error("Provided address was invalid.");
 					}
 				}
 
 				// Get a socket file descriptor and store it in the class member.
 #ifdef _WIN32
-				socket_file_descriptor = WSASocketA(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+				socket_file_descriptor = ::WSASocketA(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 #else
 				socket_file_descriptor = ::socket(AF_INET, SOCK_DGRAM, 0);
 #endif
@@ -90,17 +90,17 @@ namespace oo_socket
 					int error_value;
 					unsigned int error_value_size = sizeof(error_value);
 #ifdef _WIN32
-					int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, (int*)&error_value_size); 
+					int return_code = ::getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, (int*)&error_value_size); 
 #else
-					int return_code = getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
+					int return_code = ::getsockopt(socket_file_descriptor, SOL_SOCKET, SO_ERROR, (char *)&error_value, &error_value_size); 
 #endif
 					throw errors::initialization_error("Could not create socket, failed with error: " + std::to_string(get_last_network_error()));
 				}
 
 				// Set the reuse address option for the socket and allow the socket to broadcast.
 				int on = 1;
-				setsockopt(socket_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
-				setsockopt(socket_file_descriptor, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on));
+				::setsockopt(socket_file_descriptor, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+				::setsockopt(socket_file_descriptor, SOL_SOCKET, SO_BROADCAST, (char *)&on, sizeof(on));
 				
 				set_socket_receive_timeout(0);
 
@@ -108,11 +108,11 @@ namespace oo_socket
 #ifdef _WIN32
 				BOOL new_behavior = FALSE;
 				DWORD bytes_returned = 0;
-				WSAIoctl(socket_file_descriptor, _WSAIOW(IOC_VENDOR, 12), &new_behavior, sizeof new_behavior, NULL, 0, &bytes_returned, NULL, NULL);
+				::WSAIoctl(socket_file_descriptor, _WSAIOW(IOC_VENDOR, 12), &new_behavior, sizeof new_behavior, NULL, 0, &bytes_returned, NULL, NULL);
 #endif
 
 				// Bind socket to local address provided earlier.
-				int return_code = bind(socket_file_descriptor, (struct sockaddr *) &local_address, sizeof(struct sockaddr_in));
+				int return_code = ::bind(socket_file_descriptor, (struct sockaddr *) &local_address, sizeof(struct sockaddr_in));
 				if (return_code) {
 					throw errors::initialization_error("Could not bind socket to local address, failed with error: " + std::to_string(get_last_network_error()));
 				}
@@ -128,9 +128,9 @@ namespace oo_socket
 
 				// Close the socket file descriptor.
 #ifdef _WIN32
-				closesocket(socket_file_descriptor);
+				::closesocket(socket_file_descriptor);
 #else
-				close(socket_file_descriptor);
+				::close(socket_file_descriptor);
 #endif
 			}
 
@@ -150,11 +150,11 @@ namespace oo_socket
 				std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
 				// Allocate the receive buffer based on the estimate provided.
-				char *buffer = (char*)malloc(buffer_size);
-				memset(buffer, 0, buffer_size);
+				char *buffer = (char*)::malloc(buffer_size);
+				::memset(buffer, 0, buffer_size);
 
 				// Receive the packet.
-				int receive_size = recv(socket_file_descriptor, buffer, buffer_size, flags);
+				int receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
 
 				// If an error occurs, throw an error.
 				if (receive_size == -1) {
@@ -165,11 +165,11 @@ namespace oo_socket
 					if (error_code == EAGAIN || error_code == EWOULDBLOCK)
 #endif
 					{
-						free(buffer);
+						::free(buffer);
 						return std::vector<T>();
 					}
 					else {
-						free(buffer);
+						::free(buffer);
 						throw errors::receive_error(std::to_string(error_code));
 						return std::vector<T>();
 					}
@@ -178,8 +178,8 @@ namespace oo_socket
 				else {
 					std::vector<T> data{};
 					data.resize(std::ceil(receive_size / sizeof(T)));
-					memcpy(data.data(), buffer, receive_size);
-					free(buffer);
+					::memcpy(data.data(), buffer, receive_size);
+					::free(buffer);
 					return data;
 				}
 			}
@@ -197,7 +197,7 @@ namespace oo_socket
 				std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
 				// Receive the packet.
-				int receive_size = recv(socket_file_descriptor, buffer, buffer_size, flags);
+				int receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
 
 				// If an error occurs, throw an error.
 				if (receive_size == -1) {
@@ -237,13 +237,13 @@ namespace oo_socket
 				// Populate a temporary struct to hold the destination address.
 				sockaddr_in address_struct;
 				address_struct.sin_family = AF_INET;
-				address_struct.sin_port = htons(port);
-				if (inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
+				address_struct.sin_port = ::htons(port);
+				if (::inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
 					throw errors::send_error("Provided address was invalid.");
 				}
 				
 				// Send the contents of the string buffer using sendto.
-				int result = sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+				int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
 				
 				// If an error occurs, throw an error.
 				if (result == -1) {
@@ -272,7 +272,7 @@ namespace oo_socket
 
 				if (remote_address_set) {
 					// Send the contents of the string buffer to the preconfigured remote host.
-					int result = sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+					int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 					
 					// If an error occurs, throw an error.
 					if (result == -1) {
@@ -308,12 +308,12 @@ namespace oo_socket
 				sockaddr_in address_struct;
 				address_struct.sin_family = AF_INET;
 				address_struct.sin_port = htons(port);
-				if (inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
+				if (::inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
 					throw errors::send_error("Provided address was invalid.");
 				}
 				
 				// Send the contents of the string buffer using sendto.
-				int result = sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+				int result = ::sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
 				
 				// If an error occurs, throw an error.
 				if (result == -1) {
@@ -341,7 +341,7 @@ namespace oo_socket
 
 				if (remote_address_set) {
 					// Send the contents of the string buffer to the preconfigured remote host.
-					int result = sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+					int result = ::sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 					
 					// If an error occurs, throw an error.
 					if (result == -1) {
@@ -386,10 +386,10 @@ namespace oo_socket
 				remote_address.sin_family = AF_INET;
 				
 				// Set the port of the socket.
-				remote_address.sin_port = htons(port);
+				remote_address.sin_port = ::htons(port);
 
 				// If an address is provided, try to parse the string into a network representation.
-				if (inet_pton(AF_INET, address.c_str(), (void *)&remote_address.sin_addr.s_addr) != 1) {
+				if (::inet_pton(AF_INET, address.c_str(), (void *)&remote_address.sin_addr.s_addr) != 1) {
 					throw errors::configuration_error("Provided address was invalid.");
 				}
 
@@ -406,7 +406,7 @@ namespace oo_socket
 #ifdef _WIN32
 				// windows wants timeouts as DWORD in ms
 				DWORD timeout_ms_long = (DWORD)(timeout_ms);
-				if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout_ms_long, sizeof(timeout_ms_long))) {
+				if (::setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout_ms_long, sizeof(timeout_ms_long))) {
 					throw errors::configuration_error("An error occurred while setting the receive timeout: " + std::to_string(get_last_network_error()));
 				}
 #else
@@ -416,7 +416,7 @@ namespace oo_socket
 				// Set the remaining number of microseconds.
 				// Remaining microseconds = ((total milliseconds) - (seconds * 1000)) * 1000
 				timeout_struct.tv_usec = (int)(timeout_ms - (timeout_struct.tv_sec * 1000.0)) * 1000;
-				if (setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
+				if (::setsockopt(socket_file_descriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout_struct, sizeof(timeout_struct))) {
 					throw errors::configuration_error("An error occurred while setting the receive timeout: " + std::to_string(get_last_network_error()));
 				}
 #endif   
@@ -463,11 +463,11 @@ namespace oo_socket
 				int err;
 				/* Use the MAKEWORD(lowbyte, highbyte) macro declared in Windef.h */
 				wVersionRequested = MAKEWORD(2, 2);	// We'll ask for ver 2.2
-				err = WSAStartup(wVersionRequested, &wsaData);
+				err = ::WSAStartup(wVersionRequested, &wsaData);
 				if (err != 0) {
 					/* Tell the user that we could not find a usable */
 					/* Winsock DLL.                                  */
-					throw errors::initialization_error("WSAStartup failed with error: " + WSAGetLastError());
+					throw errors::initialization_error("WSAStartup failed with error: " + ::WSAGetLastError());
 				}
 #endif
 			}
@@ -478,9 +478,9 @@ namespace oo_socket
 			*/
 			int get_last_network_error() {
 #ifdef _WIN32
-				return WSAGetLastError();
+				return ::WSAGetLastError();
 #else
-				return errno;
+				return ::errno;
 #endif
 			}
 		};
