@@ -480,7 +480,7 @@ namespace oo_socket
 #ifdef _WIN32
 				return ::WSAGetLastError();
 #else
-				return ::errno;
+				return errno;
 #endif
 			}
 		};
