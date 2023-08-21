@@ -171,7 +171,11 @@ namespace oo_socket
 				else {
 					// Declare variables to store the source of the packet.
 					sockaddr_in from;
+#ifdef _WIN32
 					int from_size = sizeof(from);
+#else
+					socklen_t from_size = sizeof(from);
+#endif
 					char source_address_buffer[INET_ADDRSTRLEN];
 
 					// Receive the packet and store the source address.
@@ -241,7 +245,11 @@ namespace oo_socket
 				else {
 					// Declare variables to store the source of the packet.
 					sockaddr_in from;
+#ifdef _WIN32
 					int from_size = sizeof(from);
+#else
+					socklen_t from_size = sizeof(from);
+#endif
 					char source_address_buffer[INET_ADDRSTRLEN];
 
 					// Receive the packet and store the source address.
