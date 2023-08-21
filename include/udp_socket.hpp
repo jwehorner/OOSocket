@@ -140,9 +140,9 @@ namespace oo_socket
 			/**************************************************************************************************/
 			/**
 			 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
-			 * @param 	buffer_size[in] 			size of the buffer to be allocated for the storing of incoming packets (default 1500).
 			 * @param 	source_address[out] 		pointer to string to store the source address of the received packet (default nullptr).
 			 * @param 	source_port[out]			pointer to uint16_t to store the source port of the received packet (default nullptr).
+			 * @param 	buffer_size[in] 			size of the buffer to be allocated for the storing of incoming packets (default 1500).
 			 * @param 	flags[in] 					any flags that the packet should be received with (default 0).
 			 * @return 	std::vector<T>				bytes that were received from the network, empty if the receive timed out.
 			 * @throws	receive_error if an error occurred while receiving the data.
@@ -151,9 +151,9 @@ namespace oo_socket
 			 */
 			template <typename T = char>
 			std::vector<T> receive(
-				const uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, 
 				std::string* source_address = nullptr, 
 				uint16_t* source_port = nullptr, 
+				const uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, 
 				const int flags = 0) 
 			{
 				// Lock the mutex so the socket to prevent race conditions.

@@ -90,7 +90,7 @@ TEST_CASE("Check receive and receive from.", "[socket::udp::socket][test][receiv
 		std::string source_address;
 		uint16_t source_port;
 
-		REQUIRE(std::string(s1->receive(20, &source_address, &source_port).data()).compare("hello world!") == 0);
+		REQUIRE(std::string(s1->receive(&source_address, &source_port).data()).compare("hello world!") == 0);
 
 		REQUIRE(source_port == 17777);
 		REQUIRE(source_address == "127.0.0.1");
