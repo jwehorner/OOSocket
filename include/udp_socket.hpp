@@ -9,6 +9,7 @@
 #define UDP_SOCKET_HPP
 
 // Standard System Libraries
+#include <cmath>
 #include <mutex>
 #include <stdexcept>
 #include <string>
