@@ -140,13 +140,22 @@ namespace oo_socket
 			/**************************************************************************************************/
 			/**
 			 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
-			 * @param 	buffer_size 		size of the buffer to be allocated for the storing of incoming packets (default 1500).
-			 * @param 	flags 				any flags that the packet should be received with (default 0).
-			 * @return 	std::vector<T>		bytes that were received from the network, empty if the receive timed out.
+			 * @param 	buffer_size[in] 			size of the buffer to be allocated for the storing of incoming packets (default 1500).
+			 * @param 	source_address[out] 		pointer to string to store the source address of the received packet (default nullptr).
+			 * @param 	source_port[out]			pointer to uint16_t to store the source port of the received packet (default nullptr).
+			 * @param 	flags[in] 					any flags that the packet should be received with (default 0).
+			 * @return 	std::vector<T>				bytes that were received from the network, empty if the receive timed out.
 			 * @throws	receive_error if an error occurred while receiving the data.
+			 * @note	If source_address or source_port are nullptr the method acts as a regular recv call, otherwise it 
+			 * 			acts as a recvfrom call.
 			 */
 			template <typename T = char>
-			std::vector<T> receive(const uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, const int flags = 0) {
+			std::vector<T> receive(
+				const uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, 
+				std::string* source_address = nullptr, 
+				uint16_t* source_port = nullptr, 
+				const int flags = 0) 
+			{
 				// Lock the mutex so the socket to prevent race conditions.
 				std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
@@ -154,8 +163,25 @@ namespace oo_socket
 				char *buffer = (char*)::malloc(buffer_size);
 				::memset(buffer, 0, buffer_size);
 
-				// Receive the packet.
-				int receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
+				int receive_size;
+				if (source_address == nullptr || source_port == nullptr) {
+					// Receive the packet.
+					receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
+				}
+				else {
+					// Declare variables to store the source of the packet.
+					sockaddr_in from;
+					int from_size = sizeof(from);
+					char source_address_buffer[INET_ADDRSTRLEN];
+
+					// Receive the packet and store the source address.
+					receive_size = ::recvfrom(socket_file_descriptor, buffer, buffer_size, flags, (sockaddr*)(&from), &from_size);
+
+					// Convert the source information from network order back into something readable.
+					::inet_ntop(AF_INET, &(from.sin_addr), source_address_buffer, INET_ADDRSTRLEN);
+					*source_address = std::string(source_address_buffer);
+					*source_port = ::htons(from.sin_port);
+				}
 
 				// If an error occurs, throw an error.
 				if (receive_size == -1) {
@@ -187,18 +213,45 @@ namespace oo_socket
 
 			/**
 			 * @brief 	Method receive receives data using the socket and returns the contents as a vector of bytes.
-			 * @param 	buffer[out] 		buffer that will store the incoming packet.
-			 * @param 	buffer_size[in]		size of the buffer to be allocated for the storing of incoming packets (default 1500).
-			 * @param 	flags[in]			any flags that the packet should be received with (default 0).
-			 * @return 	int					number of bytes that were received from the network, 0 if the receive timed out.
+			 * @param 	buffer[out] 				buffer that will store the incoming packet.
+			 * @param 	buffer_size[in]				size of the buffer to be allocated for the storing of incoming packets.
+			 * @param 	source_address[out] 		pointer to string to store the source address of the received packet (default nullptr).
+			 * @param 	source_port[out]			pointer to uint16_t to store the source port of the received packet (default nullptr).
+			 * @param 	flags[in]					any flags that the packet should be received with (default 0).
+			 * @return 	int							number of bytes that were received from the network, 0 if the receive timed out.
 			 * @throws	receive_error if an error occurred while receiving the data.
+			 * @note	If source_address or source_port are nullptr the method acts as a regular recv call, otherwise it 
+			 * 			acts as a recvfrom call.
 			 */
-			int receive(char* buffer, const uint16_t buffer_size = MAX_RECEIVE_BUFFER_SIZE, const int flags = 0) {
+			int receive(
+				char* buffer, 
+				const uint16_t buffer_size, 
+				std::string* source_address = nullptr, 
+				uint16_t* source_port = nullptr, 
+				const int flags = 0) 
+			{
 				// Lock the mutex so the socket to prevent race conditions.
 				std::unique_lock<std::mutex> receive_lock(receive_mutex);
 
-				// Receive the packet.
-				int receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
+				int receive_size;
+				if (source_address == nullptr || source_port == nullptr) {
+					// Receive the packet.
+					receive_size = ::recv(socket_file_descriptor, buffer, buffer_size, flags);
+				}
+				else {
+					// Declare variables to store the source of the packet.
+					sockaddr_in from;
+					int from_size = sizeof(from);
+					char source_address_buffer[INET_ADDRSTRLEN];
+
+					// Receive the packet and store the source address.
+					receive_size = ::recvfrom(socket_file_descriptor, buffer, buffer_size, flags, (sockaddr*)(&from), &from_size);
+
+					// Convert the source information from network order back into something readable.
+					::inet_ntop(AF_INET, &(from.sin_addr), source_address_buffer, INET_ADDRSTRLEN);
+					*source_address = std::string(source_address_buffer);
+					*source_port = ::htons(from.sin_port);
+				}
 
 				// If an error occurs, throw an error.
 				if (receive_size == -1) {
@@ -222,7 +275,7 @@ namespace oo_socket
 			}
 
 			/**
-			 * @brief 	Method sendTo sends a string buffer of bytes to a specified remote host. 
+			 * @brief 	Method send_to sends a string buffer of bytes to a specified remote host. 
 			 * @param 	buffer	vector of bytes to send to the remote host.
 			 * @param 	port 	unsigned short port number to send the packet to.
 			 * @param 	address string representation of the address of the remote host to send the packet to (default loopback).
@@ -272,7 +325,7 @@ namespace oo_socket
 				std::unique_lock<std::mutex> send_lock(send_mutex);
 
 				if (remote_address_set) {
-					// Send the contents of the string buffer to the preconfigured remote host.
+					// Send the contents of the string buffer to the pre-configured remote host.
 					int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 					
 					// If an error occurs, throw an error.
@@ -292,7 +345,7 @@ namespace oo_socket
 			}
 
 			/**
-			 * @brief 	Method sendTo sends a string buffer of bytes to a specified remote host. 
+			 * @brief 	Method send_to sends a string buffer of bytes to a specified remote host. 
 			 * @param 	buffer		pointer to buffer of bytes to send to the remote host.
 			 * @param 	buffer_size	size of buffer in bytes.
 			 * @param 	port 		unsigned short port number to send the packet to.
@@ -341,7 +394,7 @@ namespace oo_socket
 				std::unique_lock<std::mutex> send_lock(send_mutex);
 
 				if (remote_address_set) {
-					// Send the contents of the string buffer to the preconfigured remote host.
+					// Send the contents of the string buffer to the pre-configured remote host.
 					int result = ::sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
 					
 					// If an error occurs, throw an error.
@@ -435,9 +488,9 @@ namespace oo_socket
 			/// Struct holding the local address of the socket. 
 			sockaddr_in local_address;
 
-			/// Struct holding the preconfigured remote address of the destination. 
+			/// Struct holding the pre-configured remote address of the destination. 
 			sockaddr_in remote_address;
-			/// Flag for if the remote address has been preconfigured.  
+			/// Flag for if the remote address has been pre-configured.  
 			bool remote_address_set;
 
 			/// Mutex to control ability to access private variables in the socket.

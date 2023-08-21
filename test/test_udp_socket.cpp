@@ -6,6 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/benchmark/catch_benchmark_all.hpp>
+#include <catch2/matchers/catch_matchers_all.hpp>
 
 #include "udp_socket.hpp"
 
@@ -72,6 +73,47 @@ TEST_CASE("Check send and receive without timeout.", "[socket::udp::socket][test
 		REQUIRE(std::string(buffer).compare("hello world!") == 0);
 		send_thread.join();
 		free(buffer);
+	}
+}
+
+TEST_CASE("Check receive and receive from.", "[socket::udp::socket][test][receive_from]") {
+	std::shared_ptr<oo_socket::udp::socket> s1;
+	std::shared_ptr<oo_socket::udp::socket> s2;
+	REQUIRE_NOTHROW(s1 = std::make_shared<oo_socket::udp::socket>(16666));
+	REQUIRE_NOTHROW(s2 = std::make_shared<oo_socket::udp::socket>(17777));
+
+	SECTION("Receive from using vector.") {
+		std::thread send_thread = std::thread([s2]() {
+			std::vector<char> buffer = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!', '\0'};
+			s2->send_to(buffer, 16666);
+		});
+		std::string source_address;
+		uint16_t source_port;
+
+		REQUIRE(std::string(s1->receive(20, &source_address, &source_port).data()).compare("hello world!") == 0);
+
+		REQUIRE(source_port == 17777);
+		REQUIRE(source_address == "127.0.0.1");
+
+		send_thread.join();
+	}
+
+	SECTION("Receive from using char*.") {
+		std::thread send_thread = std::thread([s2]() {
+			std::vector<char> buffer = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '!', '\0'};
+			s2->send_to(buffer, 16666);
+		});
+		std::string source_address;
+		uint16_t source_port;
+
+		char* buffer = (char*)malloc(256);
+		REQUIRE(s1->receive(buffer, 256, &source_address, &source_port) > 0);
+		REQUIRE(std::string(buffer).compare("hello world!") == 0);
+
+		REQUIRE(source_port == 17777);
+		REQUIRE(source_address == "127.0.0.1");
+
+		send_thread.join();
 	}
 }
 
