@@ -67,7 +67,12 @@ namespace oo_socket
 				local_address.sin_family = AF_INET;
 				
 				// Set the port of the socket.
+#ifdef __APPLE__
+				// Special case for apple as they define htons as a macro instead of a function.
+				local_address.sin_port = htons(port);
+#else
 				local_address.sin_port = ::htons(port);
+#endif /* __APPLE__ */
 
 				// If no address is provided, just set the local address as any,
 				if (address.compare("") == 0) {
@@ -185,7 +190,12 @@ namespace oo_socket
 					// Convert the source information from network order back into something readable.
 					::inet_ntop(AF_INET, &(from.sin_addr), source_address_buffer, INET_ADDRSTRLEN);
 					*source_address = std::string(source_address_buffer);
+#ifdef __APPLE__
+					// Special case for apple as they define htons as a macro instead of a function.
+					*source_port = htons(from.sin_port);
+#else
 					*source_port = ::htons(from.sin_port);
+#endif /* __APPLE__ */
 				}
 
 				// If an error occurs, throw an error.
@@ -259,7 +269,12 @@ namespace oo_socket
 					// Convert the source information from network order back into something readable.
 					::inet_ntop(AF_INET, &(from.sin_addr), source_address_buffer, INET_ADDRSTRLEN);
 					*source_address = std::string(source_address_buffer);
+#ifdef __APPLE__
+					// Special case for apple as they define htons as a macro instead of a function.
+					*source_port = htons(from.sin_port);
+#else
 					*source_port = ::htons(from.sin_port);
+#endif /* __APPLE__ */
 				}
 
 				// If an error occurs, throw an error.
@@ -300,7 +315,13 @@ namespace oo_socket
 				// Populate a temporary struct to hold the destination address.
 				sockaddr_in address_struct;
 				address_struct.sin_family = AF_INET;
+#ifdef __APPLE__
+				// Special case for apple as they define htons as a macro instead of a function.
+				address_struct.sin_port = htons(port);
+#else
 				address_struct.sin_port = ::htons(port);
+#endif /* __APPLE__ */
+
 				if (::inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
 					throw errors::send_error("Provided address was invalid.");
 				}
@@ -449,7 +470,13 @@ namespace oo_socket
 				remote_address.sin_family = AF_INET;
 				
 				// Set the port of the socket.
+#ifdef __APPLE__
+				// Special case for apple as they define htons as a macro instead of a function.
+				remote_address.sin_port = htons(port);
+#else
 				remote_address.sin_port = ::htons(port);
+#endif /* __APPLE__ */
+
 
 				// If an address is provided, try to parse the string into a network representation.
 				if (::inet_pton(AF_INET, address.c_str(), (void *)&remote_address.sin_addr.s_addr) != 1) {
