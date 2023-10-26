@@ -87,7 +87,7 @@ namespace oo_socket
 
 				// Get a socket file descriptor and store it in the class member.
 #ifdef _WIN32
-				socket_file_descriptor = ::WSASocketA(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+				socket_file_descriptor = ::WSASocket(AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
 #else
 				socket_file_descriptor = ::socket(AF_INET, SOCK_DGRAM, 0);
 #endif
@@ -219,7 +219,7 @@ namespace oo_socket
 				// Else, preallocate a vector based on the number of bytes actually received, copy the contents, then return it.
 				else {
 					std::vector<T> data{};
-					data.resize(std::ceil(receive_size / sizeof(T)));
+					data.resize((size_t)std::ceil(receive_size / sizeof(T)));
 					::memcpy(data.data(), buffer, receive_size);
 					::free(buffer);
 					return data;
@@ -327,8 +327,11 @@ namespace oo_socket
 				}
 				
 				// Send the contents of the string buffer using sendto.
+#ifdef _WIN32				
+				int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), (int)(buffer.size() * sizeof(T)), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+#else
 				int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
-				
+#endif				
 				// If an error occurs, throw an error.
 				if (result == -1) {
 					throw errors::send_error(std::to_string(get_last_network_error()));
@@ -356,8 +359,11 @@ namespace oo_socket
 
 				if (remote_address_set) {
 					// Send the contents of the string buffer to the pre-configured remote host.
+#ifdef _WIN32				
+					int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), (int)(buffer.size() * sizeof(T)), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+#else
 					int result = ::sendto(socket_file_descriptor, reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T), flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
-					
+#endif
 					// If an error occurs, throw an error.
 					if (result == -1) {
 						throw errors::send_error(std::to_string(get_last_network_error()));
@@ -395,10 +401,13 @@ namespace oo_socket
 				if (::inet_pton(AF_INET, address.c_str(), &address_struct.sin_addr) != 1) {
 					throw errors::send_error("Provided address was invalid.");
 				}
-				
+
 				// Send the contents of the string buffer using sendto.
+#ifdef _WIN32				
+				int result = ::sendto(socket_file_descriptor, buffer, (int)buffer_size, flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
+#else
 				int result = ::sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&address_struct, sizeof(address_struct));
-				
+#endif
 				// If an error occurs, throw an error.
 				if (result == -1) {
 					throw errors::send_error(std::to_string(get_last_network_error()));
@@ -425,8 +434,11 @@ namespace oo_socket
 
 				if (remote_address_set) {
 					// Send the contents of the string buffer to the pre-configured remote host.
+#ifdef _WIN32
+					int result = ::sendto(socket_file_descriptor, buffer, (int)buffer_size, flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
+#else
 					int result = ::sendto(socket_file_descriptor, buffer, buffer_size, flags, (const struct sockaddr *)&remote_address, sizeof(remote_address));
-					
+#endif
 					// If an error occurs, throw an error.
 					if (result == -1) {
 						throw errors::send_error(std::to_string(get_last_network_error()));
