@@ -94,6 +94,12 @@ namespace oo_socket
 
 				// If there is an error getting the socket descriptor, throw an error.
 				if(socket_file_descriptor < 0 ) {
+					// Close the socket file descriptor before throwing an error.
+#ifdef _WIN32
+					::closesocket(socket_file_descriptor);
+#else
+					::close(socket_file_descriptor);
+#endif
 					int error_value;
 					unsigned int error_value_size = sizeof(error_value);
 #ifdef _WIN32
@@ -121,6 +127,12 @@ namespace oo_socket
 				// Bind socket to local address provided earlier.
 				int return_code = ::bind(socket_file_descriptor, (struct sockaddr *) &local_address, sizeof(struct sockaddr_in));
 				if (return_code) {
+					// Close the socket file descriptor before throwing an error.
+#ifdef _WIN32
+					::closesocket(socket_file_descriptor);
+#else
+					::close(socket_file_descriptor);
+#endif
 					throw errors::initialization_error("Could not bind socket to local address, failed with error: " + std::to_string(get_last_network_error()));
 				}
 			}
